@@ -1,0 +1,97 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+    darkMode: ["class"],
+    content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],  theme: {
+  	extend: {
+  		gridTemplateColumns: {
+  			app: 'minmax(18rem , 20rem) 1fr',
+  			profile: 'min-content 1fr min-content'
+  		},
+  		gridTemplateRows: {
+  			home: 'min-content 1fr'
+  		},
+  		colors: {
+  			'cinza-01': '#f5faff',
+  			'cinza-02': '#f0f5fa',
+  			'cinza-03': '#e6f0fa',
+  			'cinza-04': '#d7d7d7',
+  			'cinza-05': '#d7e6f5',
+  			'chumbo-01': '#96a5b4',
+  			'chumbo-02': '#5f82af',
+  			'chumbo-03': '#375f7d',
+  			'chumbo-04': '#0a3c5a',
+  			'azulReal-RGB': '#0041a5',
+  			'azulReal-CMYK': '#0069bf',
+  			'azulAmplo-RGB': '#0087ff',
+  			'azulAmplo-CMYK': '#008cff',
+  			'azulPleno-RGB': '#00b9ff',
+  			'azulPleno-CMYK': '#00d9ff',
+  			'azulCeu-RGB': '#00d7ff',
+  			'azulCeu-CMYK': '#59ffff',
+  			white: '#ffff',
+  			orange: '#ff7849',
+  			verde: '#4bb46e',
+  			'verde-campo': '#009646',
+  			marrom: '#c3b9af',
+  			'marrom-terra': '#969182',
+  			amarelo: '#fac887',
+  			'gray-dark': '#273444',
+  			gray: 'rgba(128, 128, 128)',
+  			'gray-light': '#d3dce6',
+  			inputs: '#E2F0E1',
+  			black: '#000000',
+  			'white-option': '#F4F4F4',
+  			background: 'hsl(var(--background))',
+  			foreground: 'hsl(var(--foreground))',
+  			card: {
+  				DEFAULT: 'hsl(var(--card))',
+  				foreground: 'hsl(var(--card-foreground))'
+  			},
+  			popover: {
+  				DEFAULT: 'hsl(var(--popover))',
+  				foreground: 'hsl(var(--popover-foreground))'
+  			},
+  			primary: {
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))'
+  			},
+  			secondary: {
+  				DEFAULT: 'hsl(var(--secondary))',
+  				foreground: 'hsl(var(--secondary-foreground))'
+  			},
+  			muted: {
+  				DEFAULT: 'hsl(var(--muted))',
+  				foreground: 'hsl(var(--muted-foreground))'
+  			},
+  			accent: {
+  				DEFAULT: 'hsl(var(--accent))',
+  				foreground: 'hsl(var(--accent-foreground))'
+  			},
+  			destructive: {
+  				DEFAULT: 'hsl(var(--destructive))',
+  				foreground: 'hsl(var(--destructive-foreground))'
+  			},
+  			border: 'hsl(var(--border))',
+  			input: 'hsl(var(--input))',
+  			ring: 'hsl(var(--ring))',
+  			chart: {
+  				'1': 'hsl(var(--chart-1))',
+  				'2': 'hsl(var(--chart-2))',
+  				'3': 'hsl(var(--chart-3))',
+  				'4': 'hsl(var(--chart-4))',
+  				'5': 'hsl(var(--chart-5))'
+  			}
+  		},
+  		borderRadius: {
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
+  		}
+  	}
+  },
+  plugins: [require("tailwindcss-animate")],
+}
+
