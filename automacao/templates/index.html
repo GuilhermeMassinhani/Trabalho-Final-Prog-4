@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisar Documentos</title>
+
+    <!-- Incluindo Bootstrap via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <!-- Título Principal -->
+        <h1 class="text-center mb-4 display-4 text-primary">Document Analyser</h1>
+
+        <!-- Input para selecionar arquivos -->
+        <div class="mb-4">
+            <label for="file-input" class="form-label">Selecione seus arquivos</label>
+            <input type="file" id="file-input" class="form-control" multiple>
+        </div>
+
+        <!-- Botão para iniciar o upload e análise -->
+        <div class="text-center mb-3">
+            <button onclick="uploadAndAnalyze()" class="btn btn-lg btn-success">Analisar e Buscar</button>
+        </div>
+
+            <!-- Modal para exibir documentos -->
+            <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="documentModalLabel">Visualizar Documento</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Conteúdo do documento será carregado aqui -->
+                            <iframe id="documentViewer" src="" style="width: 100%; height: 600px;" frameborder="0"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Barra de carregamento (oculta inicialmente) -->
+        <div class="progress mb-5" style="height: 25px; display: none;" id="loading-bar">
+            <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar" style="width: 100%">Carregando...</div>
+        </div>
+
+
+        <!--Campo de busca-->
+
+        <div class="container py-4">
+            <h2 class="text-primary">Buscar Documento Manualmente</h2>
+            <div class="input-group mb-3">
+                <input type="text" id="search-input" class="form-control" placeholder="Digite o CPF ou CNPJ para buscar">
+                <button onclick="searchDocument()" class="btn btn-primary">Buscar</button>
+            </div>
+            <ul id="search-results" class="list-group mb-4"></ul>
+        </div>
+
+        <!-- Resultados da Busca no Banco -->
+        <h2 id="data-list-title" class="text-primary d-none">Pessoas encontradas na base de dados:</h2>
+        <ul id="data-list" class="list-group mb-4 d-none"></ul>
+
+        <!-- Botão para mostrar/ocultar as descrições -->
+        <div class="text-center my-3 d-none" id="toggle-doc-descriptions-container">
+            <button id="toggle-doc-descriptions" class="btn btn-primary">Mostrar Descrições dos Documentos</button>
+        </div>
+
+
+        <!-- Descrições dos Documentos -->
+        <h2 id="doc-descriptions-title" class="text-primary d-none">Descrições dos Documentos:</h2>
+        <ul id="doc-descriptions" class="list-group mb-4 d-none"></ul>
+
+            
+        <!-- Documentos Sem CPF/CNPJ -->
+        <h2 id="no-cpf-cnpj-title" class="text-danger d-none">Documentos Sem CPF/CNPJ:</h2>
+        <ul id="no-cpf-cnpj-list" class="list-group mb-4 d-none"></ul>
+
+
+    <!-- Modal de aviso -->
+    <div class="modal fade" id="fileModal" tabindex="-1" aria-labelledby="fileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fileModalLabel">Aviso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Por favor, selecione ao menos um arquivo para analisar antes de prosseguir.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incluindo Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Função de Upload e Análise -->
+    <script>
+        function uploadAndAnalyze() {
+    const files = document.getElementById("file-input").files;
+
+    if (files.length === 0) {
+        const modal = new bootstrap.Modal(document.getElementById('fileModal'));
+        modal.show();
+        return;
+    }
+
+    document.getElementById("loading-bar").style.display = 'block';
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files[]', files[i]);
+    }
+
+    fetch('/upload', {
+    method: 'POST',
+    body: formData
+})
+    .then(response => response.json())
+    .then(data => {
+        // Atualiza a lista de descrições dos documentos
+        updateDocumentDescriptions(data.document_descriptions);
+
+        // Atualizar outros elementos da interface
+        const dataList = document.getElementById("data-list");
+        const noCpfCnpjList = document.getElementById("no-cpf-cnpj-list");
+
+        const dataTitle = document.getElementById("data-list-title");
+        const noCpfCnpjTitle = document.getElementById("no-cpf-cnpj-title");
+
+        // Limpar conteúdo e ocultar seções
+        dataList.innerHTML = "";
+        noCpfCnpjList.innerHTML = "";
+        dataTitle.classList.add("d-none");
+        noCpfCnpjTitle.classList.add("d-none");
+        dataList.classList.add("d-none");
+        noCpfCnpjList.classList.add("d-none");
+
+        if (data.results.length > 0) {
+            data.results.forEach(item => {
+                const li = document.createElement("li");
+                li.classList.add("list-group-item", "list-group-item-action");
+                li.innerHTML = `<strong>${item.nome}</strong> - Documento: ${item.documento} - Conta: ${item.conta ? item.conta : 'Não possui'}<br>Ofícios: ${item.oficios.join(', ')}`;
+                dataList.appendChild(li);
+            });
+            dataTitle.classList.remove("d-none");
+            dataList.classList.remove("d-none");
+        }
+
+        if (data.no_cpf_cnpj_docs.length > 0) {
+    data.no_cpf_cnpj_docs.forEach(doc => {
+        const li = document.createElement("li");
+        li.classList.add("list-group-item");
+
+        // Cria o link para o documento
+        const link = document.createElement("a");
+        link.href = `./uploads/${encodeURIComponent(doc)}`; // Certifique-se de que encodeURIComponent está sendo usado
+        link.textContent = doc;
+        link.onclick = function (event) {
+            event.preventDefault(); // Impede o comportamento padrão do link
+            showDocumentInModal(this.href, doc); // Mostra o documento no modal
+        };
+
+        li.appendChild(link);
+        noCpfCnpjList.appendChild(li); // Adiciona o item à lista
+    });
+
+    noCpfCnpjTitle.classList.remove("d-none");
+    noCpfCnpjList.classList.remove("d-none");
+}
+
+// Função para exibir o documento no modal
+function showDocumentInModal(url, title) {
+    // Configura o título do modal (opcional)
+    document.getElementById("documentModalLabel").textContent = title;
+
+    // Define o URL do iframe para o documento
+    document.getElementById("documentViewer").src = url;
+
+    // Exibe o modal usando o Bootstrap
+    const modal = new bootstrap.Modal(document.getElementById("documentModal"));
+    modal.show();
+}
+
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            console.log(data); // Verifique os dados no console
+
+            // Atualizando resultados do banco de dados
+            const dataList = document.getElementById("data-list");
+            const dataTitle = document.getElementById("data-list-title");
+            dataList.innerHTML = ""; // Limpar a lista
+            if (data.results.length > 0) {
+                data.results.forEach((item) => {
+                    const li = document.createElement("li");
+                    li.classList.add("list-group-item");
+                    li.innerHTML = `<strong>${item.nome}</strong> - Documento: ${item.documento} - Conta: ${item.conta || "Não possui conta"}<br>Ofícios: ${item.oficios.join(", ")}`;
+                    dataList.appendChild(li);
+                });
+                dataTitle.classList.remove("d-none");
+                dataList.classList.remove("d-none");
+            } else {
+                dataTitle.classList.add("d-none");
+                dataList.classList.add("d-none");
+            }
+
+            // Atualizando descrições dos documentos
+            const descList = document.getElementById("doc-descriptions");
+            const descTitle = document.getElementById("doc-descriptions-title");
+            descList.innerHTML = ""; // Limpar a lista
+            if (data.document_descriptions.length > 0) {
+                data.document_descriptions.forEach((desc) => {
+                    const li = document.createElement("li");
+                    li.classList.add("list-group-item");
+                    li.innerHTML = `<strong>${desc.document}</strong>: ${desc.description}, 
+                                    CPFs: ${desc.cpf_numbers.join(", ") || "Nenhum encontrado"}, 
+                                    CNPJs: ${desc.cnpj_numbers.join(", ") || "Nenhum encontrado"}`;
+                    descList.appendChild(li);
+                });
+                descTitle.classList.remove("d-none");
+                descList.classList.remove("d-none");
+            } else {
+                descTitle.classList.add("d-none");
+                descList.classList.add("d-none");
+            }
+
+            // Atualizando documentos sem CPF/CNPJ
+            const noCpfCnpjList = document.getElementById("no-cpf-cnpj-list");
+            const noCpfCnpjTitle = document.getElementById("no-cpf-cnpj-title");
+            noCpfCnpjList.innerHTML = ""; // Limpar a lista
+            if (data.no_cpf_cnpj_docs.length > 0) {
+                data.no_cpf_cnpj_docs.forEach((doc) => {
+                    const li = document.createElement("li");
+                    li.classList.add("list-group-item");
+
+                    const link = document.createElement("a");
+                    link.href = `/uploads/${encodeURIComponent(doc)}`;
+                    link.target = "_blank";
+                    link.textContent = doc;
+
+                    li.appendChild(link);
+                    noCpfCnpjList.appendChild(li);
+                });
+                noCpfCnpjTitle.classList.remove("d-none");
+                noCpfCnpjList.classList.remove("d-none");
+            } else {
+                noCpfCnpjTitle.classList.add("d-none");
+                noCpfCnpjList.classList.add("d-none");
+            }
+        })
+        .finally(() => {
+            document.getElementById("loading-bar").style.display = "none";
+        })
+        .catch((error) => {
+            console.error("Erro ao fazer upload:", error);
+        });
+}
+        
+        function searchDocument() {
+            const documentNumber = document.getElementById("search-input").value;
+            
+            if (!documentNumber) {
+                alert("Por favor, insira um número de documento válido.");
+                return;
+            }
+            const searchResults = document.getElementById("search-results");
+            searchResults.innerHTML = "";
+            
+
+            fetch(`/search?document_number=${encodeURIComponent(documentNumber)}`, {
+                method: 'GET',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(item => {
+                        const li = document.createElement("li");
+                        li.classList.add("list-group-item");
+                        li.innerHTML = `<strong>${item.nome}</strong> - Documento: ${item.documento} - Conta: ${item.conta || "Não possui conta"}<br>Ofícios: ${item.oficios.join(', ')}`;
+                        searchResults.appendChild(li);
+                    });
+                    console.log(data)
+                } else {
+                    const li = document.createElement("li");
+                    li.classList.add("list-group-item", "list-group-item-light");
+                    li.textContent = "Nenhum resultado encontrado.";
+                    searchResults.appendChild(li);
+                }
+            })
+            .catch(error => {
+                console.error("Erro ao buscar documento:", error);
+                alert("Erro ao buscar o documento. Tente novamente.");
+            });
+        }
+
+        // Adicionar listener ao campo de busca para ativar ao pressionar Enter
+        document.getElementById("search-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                // Prevenir o comportamento padrão do formulário
+                event.preventDefault();
+                // Chamar a função de busca
+                searchDocument();
+            }
+        });
+        </script>
