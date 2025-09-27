@@ -1,195 +1,103 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import * as pdfjsLib from "pdfjs-dist";
 import { useFileContext } from "../../contexts/FilesContext";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { api } from "../../lib/axios";
+import { findTermOccurrences } from "../../utils/pdfTools";
 
-// Tipagem do documento
-interface IDocument {
-  id: number;
-  name: string;
-  path: string;
-  status: string;
-}
+// renderização simples do PDF página a página
+export function DocumentDescription() {
+  const { files, analyses, searchParam } = useFileContext();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const fileName = params.get("file") || "";
+  const file = useMemo(() => files.find((f) => f.name === fileName), [files, fileName]);
 
-interface IReturnSearch {
-  conta: number;
-  documento: string;
-  nome: string;
-  oficios: string[];
-}
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [localQuery, setLocalQuery] = useState(searchParam);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pagesRendered, setPagesRendered] = useState<number>(0);
 
-interface IApiResponse {
-  results: IReturnSearch[];
-}
-
-export const DocumentDescription: React.FC = () => {
-  const { result, setSearchResults } = useFileContext();
-  const [searchCompleted, setSearchCompleted] = useState(false);
-  const [searchDocument, setSearchDocument] = useState("");
-  const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null); // Documento selecionado
-  const [documentSearchResults, setDocumentSearchResults] = useState<Record<number, IReturnSearch[]>>(() => {
-    // Recuperar resultados do sessionStorage
-    const savedResults = sessionStorage.getItem("documentSearchResults");
-    return savedResults ? JSON.parse(savedResults) : {};
-  });
-
-  // Salvar documentSearchResults no sessionStorage sempre que for atualizado
   useEffect(() => {
-    sessionStorage.setItem("documentSearchResults", JSON.stringify(documentSearchResults));
-  }, [documentSearchResults]);
+    if (!file || !containerRef.current) return;
 
-  const searchDocuments = async (documentId: number) => {
-    try {
-      const response = await api.get<IApiResponse>(`/search?document_number=${searchDocument}`);
-      if (response.status === 200) {
-        const newResults = response.data.results;
+    (async () => {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await (pdfjsLib as any).getDocument({ data: arrayBuffer }).promise;
+      setNumPages(pdf.numPages);
 
-        // Atualizar os resultados globais no searchResults
-        setSearchResults((prevResults) => {
-          const validPrevResults = Array.isArray(prevResults) ? prevResults : [];
-          return [
-            ...validPrevResults,
-            ...newResults.filter(
-              (newItem) =>
-                !validPrevResults.some((existingItem) => existingItem.documento === newItem.documento)
-            ),
-          ];
-        });
+      // limpa container
+      containerRef.current!.innerHTML = "";
 
-        // Associar os resultados ao documento específico
-        setDocumentSearchResults((prevResults) => ({
-          ...prevResults,
-          [documentId]: newResults,
-        }));
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const viewport = page.getViewport({ scale: 1.3 });
 
-        setSearchCompleted(true);
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = "100%";
+        canvas.style.height = "auto";
+        canvas.className = "rounded-lg shadow mb-4";
+
+        const context = canvas.getContext("2d")!;
+        await page.render({ canvasContext: context, viewport }).promise;
+
+        containerRef.current!.appendChild(canvas);
+        setPagesRendered((prev) => prev + 1);
       }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    })();
+  }, [file]);
 
-  // Função para renderizar um documento individual
-  const renderDocumentItem = (doc: any, index: number) => {
-    const documentData: IDocument = {
-      id: index,
-      name: `Documento ${index + 1}`,
-      path: doc.document,
-      status:
-        doc.cpf_numbers.length === 0 && doc.cnpj_numbers.length === 0
-          ? "pendente"
-          : "analisado",
-    };
+  if (!file) return <div className="p-4 text-sm">Arquivo não encontrado.</div>;
 
-    const finalSearchResults = documentSearchResults[documentData.id] || [];
-
-    return (
-      <li
-        key={`doc-${index}`}
-        className="flex items-center justify-between p-4 w-full border rounded-lg shadow-sm hover:bg-gray-100"
-      >
-        <div className="flex flex-col">
-          <h2 className="font-semibold">{documentData.name}</h2>
-          <span className="text-gray-600">{documentData.path}</span>
-
-          {/* Condicional para mostrar a etiqueta amarela */}
-          {documentData.status === "pendente" && (
-            <span className="bg-yellow-300 text-yellow-800 px-2 py-1 text-xs rounded-md mt-1">
-              Pendente de Análise
-            </span>
-          )}
-        </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedDocument(documentData)}
-              className="hover:bg-azulReal-CMYK bg-azulAmplo-RGB hover:text-white text-white"
-            >
-              Visualizar
-            </Button>
-          </DialogTrigger>
-          <DialogContent 
-            aria-describedby="Conteúdo do modal, PDF renderizado, busca no banco de dados e entre outras funcionalidades"
-            className="sm:max-w-[800px] flex flex-col items-center justify-center"
-          >
-            <DialogHeader className="flex flex-col w-full p-2 gap-4">
-              <DialogTitle className="text-xl">{selectedDocument?.path}</DialogTitle>
-              <div className="flex w-full max-w-sm items-center space-x-2">
-                <Input
-                  onChange={(e) => setSearchDocument(e.target.value)}
-                  type="text"
-                  placeholder="Busque o documento por aqui"
-                />
-                <Button
-                  onClick={() => searchDocuments(documentData.id)}
-                  className="bg-azulReal-CMYK hover:bg-azulReal-RGB"
-                >
-                  Buscar
-                </Button>
-              </div>
-              {searchCompleted &&
-                (finalSearchResults.length > 0 ? (
-                  finalSearchResults.map((ret) => (
-                    <li className="list-none flex gap-2" key={ret.conta}>
-                      <span className="font-semibold">Resultados da {ret.oficios}</span>
-                      <span>Nome: {ret.nome}</span>
-                      <span>Conta: {ret.conta}</span>
-                      <span>Documento: {ret.documento}</span>
-                    </li>
-                  ))
-                ) : (
-                  <p className="font-semibold mt-4">
-                    Nenhum resultado encontrado para o documento pesquisado.
-                  </p>
-                ))}
-            </DialogHeader>
-            {selectedDocument && (
-              <div className="w-full h-[500px]">
-                <embed
-                  src={`https://analisador.amplea.coop.br/api/uploads/${encodeURIComponent(
-                    selectedDocument.path
-                  )}`}
-                  type="application/pdf"
-                  width="100%"
-                  height="100%"
-                />
-              </div>
-            )}
-            <DialogClose>
-              <div
-                role="button"
-                className="text-white p-2 rounded-lg text-sm font-semibold bg-azulReal-CMYK hover:bg-azulReal-RGB"
-              >
-                <span>Finalizar Análise</span>
-              </div>
-            </DialogClose>
-          </DialogContent>
-        </Dialog>
-      </li>
-    );
-  };
+  const analysis = analyses[file.name];
+  const occurrences = useMemo(() => {
+    const pagesText = analysis?.pagesText || [];
+    if (!localQuery.trim()) return [];
+    return findTermOccurrences(pagesText, localQuery);
+  }, [analysis?.pagesText, localQuery]);
 
   return (
-    <div className="flex flex-col gap-4 mt-2 p-4">
-      <h1 className="text-xl mt-2 mb-2 font-semibold"> Lista completa</h1>
+    <div className="p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">{file.name}</h2>
+          <div className="text-xs text-gray-500">
+            Páginas renderizadas: {pagesRendered}/{numPages}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            className="border rounded-md px-3 py-2 text-sm w-80"
+            placeholder="Buscar no texto extraído (OCR + PDF)"
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-      <ul className="space-y-2">
-        {result.document_descriptions && result.document_descriptions.length > 0 ? (
-          result.document_descriptions.map(renderDocumentItem)
-        ) : (
-          <p className="text-gray-500">Nenhum documento encontrado.</p>
-        )}
-      </ul>
+      {/* Lista de ocorrências no texto extraído */}
+      {localQuery.trim() && (
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold mb-2">
+            Ocorrências no texto processado ({occurrences.length}):
+          </div>
+          {occurrences.length ? (
+            <ul className="list-disc ml-5 text-sm">
+              {occurrences.slice(0, 50).map((m, i) => (
+                <li key={i}>
+                  Página {m.page}: <code className="bg-gray-100 px-1">{m.snippet}</code>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-sm text-gray-600">Nenhuma ocorrência.</div>
+          )}
+        </div>
+      )}
+
+      {/* Canvas do PDF */}
+      <div ref={containerRef} className="mt-2" />
     </div>
   );
-};
+}

@@ -9,7 +9,7 @@ import App from './App.tsx'
 import { PendingAnalyze } from './pages/pendingAnalyze/PendingAnalyze.tsx';
 import { RelationShip } from './pages/relationShip/RelationShip.tsx';
 import { DocumentDescription } from './pages/documentDescription/DocumentDescription.tsx';
-import { Testes } from './testes.tsx';
+import { ComponentAnalyzerDropZone } from './pages/UploadComponentsPage/ComponentAnalyzerDropZone.tsx';
 
 const router = createBrowserRouter([
 
@@ -19,7 +19,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Testes/>
+        element: <ComponentAnalyzerDropZone/>
       },
       {
         path: "/relationship",
