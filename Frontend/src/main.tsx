@@ -10,6 +10,7 @@ import { PendingAnalyze } from './pages/pendingAnalyze/PendingAnalyze.tsx';
 import { RelationShip } from './pages/relationShip/RelationShip.tsx';
 import { DocumentDescription } from './pages/documentDescription/DocumentDescription.tsx';
 import { Testes } from './testes.tsx';
+import LoginComponent from './pages/login/login.tsx';
 
 const router = createBrowserRouter([
 
@@ -32,6 +33,10 @@ const router = createBrowserRouter([
       {
         path: "/documentDescription",
         element: <DocumentDescription/>
+      },
+      {
+        path: "/login",
+        element: <LoginComponent/>
       }
     ],
       }

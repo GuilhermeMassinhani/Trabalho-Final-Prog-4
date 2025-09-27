@@ -56,7 +56,7 @@ def preprocess_image(image):
 
     # Binarização (converter para preto e branco)
     _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-
+    
     # Redimensionar para aumentar a qualidade
     resized = cv2.resize(binary, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
 

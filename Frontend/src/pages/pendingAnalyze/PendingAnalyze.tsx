@@ -51,7 +51,7 @@ export const PendingAnalyze: React.FC = () => {
   }, [documentSearchResults]);
 
   // Salvar checkedDocuments no sessionStorage sempre que for atualizado
-  useEffect(() => {
+  useEffect(() => { 
     sessionStorage.setItem("checkedDocuments", JSON.stringify(checkedDocuments));
   }, [checkedDocuments]);
 
