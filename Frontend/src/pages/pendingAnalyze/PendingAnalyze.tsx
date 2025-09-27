@@ -1,7 +1,18 @@
+import React, { useState, useEffect } from "react";
 import { useFileContext } from "../../contexts/FilesContext";
-import { Link } from "react-router-dom";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "../../components/ui/dialog";
+import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
+import { api } from "../../lib/axios";
+import { Input } from "../../components/ui/input";
 
-<<<<<<< HEAD
 interface IDocument {
   id: number;
   name: string;
@@ -89,67 +100,106 @@ export const PendingAnalyze: React.FC = () => {
 
     // Resultados específicos para o documento
     const finalSearchResults = documentSearchResults[documentData.id] || [];
-=======
-export function PendingAnalyze() {
-  const { files, analyses } = useFileContext();
->>>>>>> a97eb91b33f13e8b3fa3fee3983281aab9fe128c
 
-  if (!files.length) {
     return (
-      <div className="p-4 text-sm">
-        Nenhum arquivo carregado. <Link className="underline" to="/">Enviar PDFs</Link>
-      </div>
+      <li
+        key={`doc-${index}`}
+        className="flex items-center justify-between p-4 w-1/3 border rounded-lg shadow-sm hover:bg-gray-100"
+      >
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={!!checkedDocuments[documentData.id]}
+            onCheckedChange={() => toggleCheck(documentData.id)}
+            id={`checkbox-${documentData.id}`}
+          />
+          <label
+            htmlFor={`checkbox-${documentData.id}`}
+            className="text-sm font-medium cursor-pointer"
+          >
+            Documento {documentData.id + 1}
+          </label>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              onClick={() => setSelectedDocument(documentData)}
+              className="hover:bg-azulReal-CMYK bg-azulAmplo-RGB hover:text-white text-white"
+            >
+              Visualizar
+            </Button>
+          </DialogTrigger>
+          <DialogContent
+            className="sm:max-w-[800px] flex flex-col items-center justify-center"
+            aria-describedby="Conteúdo do modal, PDF renderizado, busca no banco de dados e entre outras funcionalidades"
+          >
+            <DialogHeader className="flex flex-col w-full p-2 gap-4">
+              <DialogTitle className="text-xl">{selectedDocument?.path}</DialogTitle>
+              <div className="flex w-full max-w-sm items-center space-x-2">
+                <Input
+                  onChange={(e) => setSearchDocument(e.target.value)}
+                  type="text"
+                  placeholder="Busque o documento por aqui"
+                />
+                <Button
+                  onClick={() => searchDocuments(documentData.id)}
+                  className="bg-azulReal-CMYK hover:bg-azulReal-RGB"
+                >
+                  Buscar
+                </Button>
+              </div>
+              {finalSearchResults.length > 0 ? (
+                finalSearchResults.map((ret) => (
+                  <li className="list-none flex gap-2" key={ret.conta}>
+                    <span className="font-semibold">Resultados da {ret.oficios}</span>
+                    <span>Nome: {ret.nome}</span>
+                    <span>Conta: {ret.conta}</span>
+                    <span>Documento: {ret.documento}</span>
+                  </li>
+                ))
+              ) : (
+                <p className="font-semibold mt-4">
+                  Nenhum resultado encontrado para o documento pesquisado.
+                </p>
+              )}
+            </DialogHeader>
+            {selectedDocument && (
+              <div className="w-full h-[500px]">
+                <embed
+                  src={`https://analisador.amplea.coop.br/api/uploads/${encodeURIComponent(
+                    selectedDocument.path
+                  )}`}
+                  type="application/pdf"
+                  width="100%"
+                  height="100%"
+                />
+              </div>
+            )}
+            <DialogClose>
+              <div
+                role="button"
+                onClick={() => toggleCheck(documentData.id)}
+                className="text-white p-2 rounded-lg text-sm font-semibold bg-azulReal-CMYK hover:bg-azulReal-RGB"
+              >
+                <span>Finalizar Análise</span>
+              </div>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
+      </li>
     );
-  }
+  };
 
   return (
-    <div className="p-4 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">Lista completa</h2>
-
-      <div className="border rounded-lg overflow-hidden">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left p-3 font-medium">Documento</th>
-              <th className="text-left p-3 font-medium">Ocorrências</th>
-              <th className="text-left p-3 font-medium">Status</th>
-              <th className="text-left p-3 font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {files.map((f) => {
-              const a = analyses[f.name];
-              const occ = a?.matches?.length || 0;
-              const status = a ? (a.found ? "Com ocorrências" : "Analisado, 0 ocorrências") : "Pendente";
-              return (
-                <tr key={f.name} className="border-t">
-                  <td className="p-3">{f.name}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs ${occ > 0 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                      {occ}
-                    </span>
-                  </td>
-                  <td className="p-3">{status}</td>
-                  <td className="p-3">
-                    <div className="flex gap-3">
-                      <Link className="underline" to={`/documentDescription?file=${encodeURIComponent(f.name)}`}>
-                        Análise manual
-                      </Link>
-                      <Link className="underline" to="/relationship">
-                        Ver ocorrências
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="text-xs text-gray-500">
-        Dica: use “Análise manual” para testar um novo parâmetro e depois clique em “Atualizar ocorrências globais”.
-      </div>
+    <div className="flex flex-col gap-4 p-4">
+      <h1 className="text-xl font-semibold">Documentos pendentes de Análise</h1>
+      <ul className="space-y-2">
+        {result.no_cpf_cnpj_docs && result.no_cpf_cnpj_docs.length > 0 ? (
+          result.no_cpf_cnpj_docs.map(renderDocumentItem)
+        ) : (
+          <p className="text-gray-500">Nenhum documento encontrado.</p>
+        )}
+      </ul>
     </div>
   );
-}
+};

@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "automacao"
+version = "0.1.0"
+description = ""
+authors = ["Matheus Bueno Nardi <matheusnardi2004@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pypdf2 = "^3.0.1"
+psycopg2-binary = "^2.9.10"
+flask = "^3.0.3"
+flask-cors = "^5.0.0"
+pytesseract = "^0.3.13"
+pdf2image = "^1.17.0"
+pillow = "^11.0.0"
+opencv-python = "^4.10.0.84"
+fastapi = "^0.115.5"
+python-multipart = "^0.0.18"
+requests = "^2.32.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
