@@ -2,57 +2,63 @@ import { useFileContext } from "../../contexts/FilesContext";
 import { Link } from "react-router-dom";
 
 export function PendingAnalyze() {
-  const { files, analyses, searchParam } = useFileContext();
+  const { files, analyses } = useFileContext();
 
   if (!files.length) {
-    return <div className="p-4 text-sm">Nenhum arquivo carregado.</div>;
+    return (
+      <div className="p-4 text-sm">
+        Nenhum arquivo carregado. <Link className="underline" to="/">Enviar PDFs</Link>
+      </div>
+    );
   }
 
   return (
     <div className="p-4 flex flex-col gap-4">
-      <h2 className="text-lg font-semibold">
-        Resultados da análise — parâmetro: <span className="font-mono">{searchParam}</span>
-      </h2>
+      <h2 className="text-lg font-semibold">Lista completa</h2>
 
-      <div className="flex flex-col gap-3">
-        {files.map((f) => {
-          const a = analyses[f.name];
-          const status = a?.found ? "Encontrado" : "Não encontrado";
-          return (
-            <div key={f.name} className="border rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{f.name}</div>
-                  <div className={`text-sm ${a?.found ? "text-green-600" : "text-red-600"}`}>
-                    {status}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    className="text-sm underline"
-                    to={`/documentDescription?file=${encodeURIComponent(f.name)}`}
-                  >
-                    Abrir PDF / Buscar
-                  </Link>
-                </div>
-              </div>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left p-3 font-medium">Documento</th>
+              <th className="text-left p-3 font-medium">Ocorrências</th>
+              <th className="text-left p-3 font-medium">Status</th>
+              <th className="text-left p-3 font-medium">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {files.map((f) => {
+              const a = analyses[f.name];
+              const occ = a?.matches?.length || 0;
+              const status = a ? (a.found ? "Com ocorrências" : "Analisado, 0 ocorrências") : "Pendente";
+              return (
+                <tr key={f.name} className="border-t">
+                  <td className="p-3">{f.name}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs ${occ > 0 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                      {occ}
+                    </span>
+                  </td>
+                  <td className="p-3">{status}</td>
+                  <td className="p-3">
+                    <div className="flex gap-3">
+                      <Link className="underline" to={`/documentDescription?file=${encodeURIComponent(f.name)}`}>
+                        Análise manual
+                      </Link>
+                      <Link className="underline" to="/relationship">
+                        Ver ocorrências
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-              {a?.found && a.matches.length > 0 && (
-                <div className="mt-2 text-sm">
-                  <div className="font-semibold">Ocorrências:</div>
-                  <ul className="list-disc ml-5">
-                    {a.matches.slice(0, 5).map((m, idx) => (
-                      <li key={idx}>
-                        Página {m.page}: <code className="bg-gray-100 px-1">{m.snippet}</code>
-                      </li>
-                    ))}
-                  </ul>
-                  {a.matches.length > 5 && <div className="text-xs mt-1">...e mais {a.matches.length - 5}</div>}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="text-xs text-gray-500">
+        Dica: use “Análise manual” para testar um novo parâmetro e depois clique em “Atualizar ocorrências globais”.
       </div>
     </div>
   );

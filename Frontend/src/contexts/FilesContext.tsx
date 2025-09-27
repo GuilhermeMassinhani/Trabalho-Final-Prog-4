@@ -3,21 +3,26 @@ import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import { extractTextWithPdfJs, ocrPdfPageToText, findTermOccurrences } from "../utils/pdfTools";
 
-interface IReturnSearch {
-  conta: number;        // (mantido se você usa em algum lugar; aqui não é obrigatório)
+/* =========================
+ * Tipagens
+ * ========================= */
+
+export interface IReturnSearch {
+  conta: number;        // opcional/legado (mantenho caso você use em alguma tela)
   documento: string;    // nome do arquivo
   nome: string;         // opcional
   oficios: string[];    // opcional
 }
 
-type DocAnalysis = {
+export type DocAnalysis = {
   fileName: string;
   pagesText: string[]; // texto de cada página (pdf.js e/ou OCR)
   found: boolean;
   matches: { page: number; index: number; snippet: string }[];
 };
 
-interface IApiResult {
+// Mantido apenas para compatibilidade com telas antigas
+export interface IApiResult {
   document_descriptions: Array<{
     cnpj_numbers: string[];
     cpf_numbers: string[];
@@ -28,23 +33,32 @@ interface IApiResult {
   results: [];
 }
 
-interface IReturnApi {
+export interface IReturnApi {
+  // Arquivos
   files: File[];
   setFiles: (files: File[] | ((prev: File[]) => File[])) => void;
 
+  // Loading
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 
-  // NOVOS: análise local
+  // Parâmetro/busca global
   searchParam: string;
   setSearchParam: (s: string) => void;
-  analyses: Record<string, DocAnalysis>;
-  analyzeFiles: () => Promise<void>;
 
-  // legado que você já usa em outras telas
-  result: IApiResult; // mantido, mas agora não vem de API
+  // Resultado de análise por documento
+  analyses: Record<string, DocAnalysis>;
+
+  // Ações principais
+  analyzeFiles: () => Promise<void>;                // primeira análise com parâmetro atual
+  updateParamAndRequery: (newParam: string) => Promise<void>; // troca termo e reconta TUDO
+
+  // Legado/compat (se ainda houver telas consumindo)
+  result: IApiResult;
   searchResults: Record<string, IReturnSearch[]>;
   setSearchResults: (r: Record<string, IReturnSearch[]>) => void;
+
+  // Limpar tudo e recomeçar
   clearSearch: () => void;
 }
 
@@ -52,32 +66,37 @@ interface IFileProviderProps {
   children: ReactNode;
 }
 
+/* =========================
+ * Contexto
+ * ========================= */
+
 const FileContext = createContext<IReturnApi | undefined>(undefined);
 
 export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
+  const navigate = useNavigate();
+
+  // Loading UI
   const [isLoading, setIsLoading] = useState(false);
 
+  // Estado principal
+  const [files, setFiles] = useState<File[]>(
+    JSON.parse(sessionStorage.getItem("files") || "[]")
+  );
+
+  const [searchParam, setSearchParam] = useState<string>(
+    sessionStorage.getItem("searchParam") || ""
+  );
+
+  const [analyses, setAnalyses] = useState<Record<string, DocAnalysis>>(
+    JSON.parse(sessionStorage.getItem("analyses") || "{}")
+  );
+
+  // Compatibilidade com telas legadas (não usados na nova lógica)
   const defaultResult: IApiResult = {
     document_descriptions: [],
     no_cpf_cnpj_docs: [],
     results: [],
   };
-
-  const [files, setFiles] = useState<File[]>(
-    JSON.parse(sessionStorage.getItem("files") || "[]")
-  );
-
-  // **parâmetro de busca** controlado no contexto p/ reaproveitar em páginas
-  const [searchParam, setSearchParam] = useState<string>(
-    sessionStorage.getItem("searchParam") || ""
-  );
-
-  // análises por documento
-  const [analyses, setAnalyses] = useState<Record<string, DocAnalysis>>(
-    JSON.parse(sessionStorage.getItem("analyses") || "{}")
-  );
-
-  // legado/compatibilidade com telas já criadas
   const [result, setResult] = useState<IApiResult>(
     JSON.parse(sessionStorage.getItem("result") || "null") || defaultResult
   );
@@ -85,13 +104,34 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     JSON.parse(sessionStorage.getItem("searchResults") || "{}")
   );
 
-  const navigate = useNavigate();
+  /* =========================
+   * Helpers
+   * ========================= */
 
-  /** Analisa arquivos localmente: pdf.js -> busca; se não achou, OCR página a página até achar ou terminar */
+  async function ensurePagesTextForFile(file: File): Promise<string[]> {
+    // Primeiro tenta texto nativo com pdf.js
+    const { pages } = await extractTextWithPdfJs(file);
+    return pages; // Se precisar, o OCR entra nas funções principais
+  }
+
+  /* =========================
+   * Ações principais
+   * ========================= */
+
+  /** Primeira análise: usa searchParam atual, tenta pdf.js e, se não achar, roda OCR por página. */
   const analyzeFiles = async () => {
     if (!files.length) return;
-    if (!searchParam.trim()) {
-      Swal.fire({ icon: "warning", title: "Informe o parâmetro de busca", timer: 2000, showConfirmButton: false, toast: true, position: "top" });
+
+    const term = (searchParam || "").trim();
+    if (!term) {
+      Swal.fire({
+        icon: "warning",
+        title: "Informe o parâmetro de busca",
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top",
+      });
       return;
     }
 
@@ -101,20 +141,24 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     for (const file of files) {
       const name = file.name;
       try {
-        // 1) Tenta extrair texto com pdf.js
+        // 1) Extrai texto nativo
         const { pages } = await extractTextWithPdfJs(file);
-        let matches = findTermOccurrences(pages, searchParam);
+        let matches = findTermOccurrences(pages, term);
 
-        // 2) Se não encontrou, tenta OCR página a página (leve: sai no 1º hit)
+        // 2) Se não achou, OCR página a página (para no primeiro hit)
         if (!matches.length) {
-          const ocrPagesText: string[] = [...pages]; // reaproveita vector
-          for (let p = 1; p <= pages.length; p++) {
-            // se a página já tem texto plausível, pula o OCR dessa página
-            if ((pages[p - 1] || "").trim().length > 5) continue;
+          const ocrPagesText: string[] = [...pages];
 
+          // Precisamos do número de páginas do PDF
+          const ab = await file.arrayBuffer();
+          const pdf = await (await (await import("pdfjs-dist")).getDocument({ data: ab }).promise);
+
+          for (let p = 1; p <= pdf.numPages; p++) {
             const ocrText = await ocrPdfPageToText(file, p);
-            ocrPagesText[p - 1] = ocrText;
-            matches = findTermOccurrences(ocrPagesText, searchParam);
+            if (ocrText && ocrText.trim().length > 0) {
+              ocrPagesText[p - 1] = ocrText;
+            }
+            matches = findTermOccurrences(ocrPagesText, term);
             if (matches.length) {
               newAnalyses[name] = {
                 fileName: name,
@@ -159,16 +203,86 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     Swal.fire({
       icon: "success",
       title: "Análise concluída!",
-      timer: 2000,
+      timer: 1800,
       showConfirmButton: false,
       toast: true,
       position: "top",
     });
 
+    // Por padrão, após a 1ª análise, vai para lista completa
     navigate("/pendingAnalyze");
   };
 
-  // Persistências
+  /** Troca o parâmetro global e reconta matches em TODOS os arquivos.
+   *  Garante pagesText (pdf.js) e, se não achar, OCR página a página.
+   */
+  const updateParamAndRequery = async (newParam: string) => {
+    const term = (newParam || "").trim();
+    setSearchParam(term);
+    if (!files.length) return;
+
+    setIsLoading(true);
+    const updated: Record<string, DocAnalysis> = { ...analyses };
+
+    for (const file of files) {
+      const name = file.name;
+      try {
+        let pagesText = updated[name]?.pagesText;
+
+        // Garante que temos texto base (pdf.js)
+        if (!pagesText || !pagesText.length) {
+          pagesText = await ensurePagesTextForFile(file);
+        }
+
+        // 1) Busca com texto atual
+        let matches = findTermOccurrences(pagesText, term);
+
+        // 2) Se não achou, OCR página a página (atualiza pagesText se encontrar algo)
+        if (!matches.length) {
+          const ab = await file.arrayBuffer();
+          const pdf = await (await (await import("pdfjs-dist")).getDocument({ data: ab }).promise);
+
+          const ocrPagesText = [...pagesText];
+          for (let p = 1; p <= pdf.numPages; p++) {
+            const ocrText = await ocrPdfPageToText(file, p);
+            if (ocrText?.trim()) ocrPagesText[p - 1] = ocrText;
+
+            matches = findTermOccurrences(ocrPagesText, term);
+            if (matches.length) {
+              pagesText = ocrPagesText;
+              break;
+            }
+          }
+          if (!matches.length) {
+            pagesText = ocrPagesText;
+          }
+        }
+
+        updated[name] = {
+          fileName: name,
+          pagesText,
+          found: matches.length > 0,
+          matches,
+        };
+      } catch (e) {
+        console.error("Erro reanalisando", name, e);
+        updated[name] = {
+          fileName: name,
+          pagesText: updated[name]?.pagesText || [],
+          found: false,
+          matches: [],
+        };
+      }
+    }
+
+    setAnalyses(updated);
+    setIsLoading(false);
+  };
+
+  /* =========================
+   * Persistência
+   * ========================= */
+
   useEffect(() => {
     sessionStorage.setItem("files", JSON.stringify(files));
   }, [files]);
@@ -189,13 +303,23 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     sessionStorage.setItem("searchParam", searchParam);
   }, [searchParam]);
 
+  /* =========================
+   * Limpar estado
+   * ========================= */
+
   const clearSearch = () => {
     setFiles([]);
     setAnalyses({});
     setSearchResults({});
+    setSearchParam("");
+    setResult(defaultResult);
     sessionStorage.clear();
     window.location.reload();
   };
+
+  /* =========================
+   * Provider
+   * ========================= */
 
   return (
     <FileContext.Provider
@@ -208,12 +332,15 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
         searchParam,
         setSearchParam,
         analyses,
+
         analyzeFiles,
+        updateParamAndRequery,
 
         // legado
         result,
         searchResults,
         setSearchResults,
+
         clearSearch,
       }}
     >
@@ -221,6 +348,10 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     </FileContext.Provider>
   );
 };
+
+/* =========================
+ * Hook
+ * ========================= */
 
 export const useFileContext = () => {
   const context = useContext(FileContext);

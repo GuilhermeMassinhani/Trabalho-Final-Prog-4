@@ -13,6 +13,45 @@ export async function extractTextWithPdfJs(file: File): Promise<{ pages: string[
   }
   return { pages };
 }
+/** Extrai TODOS os itens de texto do pdf.js por página, para debug */
+export async function debugExtractAllTextItems(file: File): Promise<Array<{page: number, items: string[], joined: string}>> {
+  const buf = await file.arrayBuffer();
+  const pdf = await (pdfjsLib as any).getDocument({ data: buf }).promise;
+  const out: Array<{page: number, items: string[], joined: string}> = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const items = textContent.items.map((it: any) => (it.str ?? "").toString());
+    const joined = items.join(" ");
+    out.push({ page: i, items, joined });
+  }
+  return out;
+}
+
+/** (opcional) Loga no console tudo que o pdf.js retornou (com alguns metadados) */
+export async function debugLogPdfJs(file: File) {
+  const buf = await file.arrayBuffer();
+  const pdf = await (pdfjsLib as any).getDocument({ data: buf }).promise;
+  // metadados básicos
+  console.group(`pdfjs DEBUG :: ${file.name}`);
+  console.log("numPages:", pdf.numPages);
+  try {
+    const meta = await pdf.getMetadata().catch(() => null);
+    if (meta) console.log("metadata:", meta?.info, meta?.metadata?.metadata?._metadata);
+  } catch {}
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    console.group(`page ${i}`);
+    console.log("items length:", tc.items.length);
+    tc.items.forEach((it: any, idx: number) => {
+      console.log(idx, it?.str, { dir: it?.dir, fontName: it?.fontName, transform: it?.transform });
+    });
+    console.groupEnd();
+  }
+  console.groupEnd();
+}
 
 export async function ocrPdfPageToText(file: File, pageNumber: number): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -66,6 +105,8 @@ export function findTermOccurrences(pages: string[], term: string) {
       results.push({ page: i + 1, index: match.index, snippet });
     }
   });
+
+  
 
   return results;
 }
