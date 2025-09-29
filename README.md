@@ -1,10 +1,48 @@
 <h1> 📌 Projeto Fullstack - Frontend + Backend </h1>
+📖 Sobre o Projeto
+
+Este é um projeto Fullstack que une frontend e backend em uma aplicação completa.
+A ideia é oferecer uma base sólida para desenvolvimento web moderno, onde o frontend cuida da interface do usuário e o backend concentra a lógica de negócio e a API.
+
+🎯 Objetivo
+
+O principal objetivo é criar uma aplicação que:
+
+* Tenha uma API confiável para gerenciamento e exposição de dados.
+
+* Forneça um frontend rápido e responsivo, com boa experiência para o usuário.
+
+* Garanta a comunicação eficiente entre as camadas (via REST API).
+
+* Sirva como modelo prático para desenvolvimento de projetos web reais.
+
+🚀 Motivação
+
+Este projeto foi desenvolvido para praticar e demonstrar:
+
+* Integração entre React + TypeScript + Tailwind no frontend.
+
+* Estruturação de um backend em Node.js/Python.
+
+* Uso de boas práticas de versionamento, organização de pastas e documentação.
+
+✅ Resultados Obtidos
+
+* O backend foi configurado para expor endpoints de forma confiável, permitindo integração com o frontend.
+
+* O frontend consome os dados da API e exibe as informações em uma interface responsiva e intuitiva.
+
+* As duas camadas funcionam de forma integrada, simulando um ambiente de produção.
+
+* Documentação clara e scripts prontos para rodar o projeto em diferentes ambientes.
+
+* Estrutura flexível que pode ser expandida para novos recursos ou adaptada a diferentes bancos de dados.
 
 Este projeto é dividido em duas partes principais:
 
-Frontend → interface do usuário (React + typescript, Tailwind).
+- Frontend → interface do usuário (React + typescript, Tailwind).
 
-Backend → API e regras de negócio (Node.js, Python).
+- Backend → API e regras de negócio (Node.js, Python).
 
 <h2> 📂 Estrutura de Pastas </h2>
 
