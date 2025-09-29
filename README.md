@@ -16,16 +16,6 @@ O principal objetivo é criar uma aplicação que:
 
 * Sirva como modelo prático para desenvolvimento de projetos web reais.
 
-🚀 Motivação
-
-Este projeto foi desenvolvido para praticar e demonstrar:
-
-* Integração entre React + TypeScript + Tailwind no frontend.
-
-* Estruturação de um backend em Node.js/Python.
-
-* Uso de boas práticas de versionamento, organização de pastas e documentação.
-
 ✅ Resultados Obtidos
 
 * O backend foi configurado para expor endpoints de forma confiável, permitindo integração com o frontend.
