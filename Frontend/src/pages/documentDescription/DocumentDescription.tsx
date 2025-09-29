@@ -1,195 +1,268 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url";
 import { useFileContext } from "../../contexts/FilesContext";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "../../components/ui/dialog";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { api } from "../../lib/axios";
+import { findTermOccurrences } from "../../utils/pdfTools";
 
-// Tipagem do documento
-interface IDocument {
-  id: number;
-  name: string;
-  path: string;
-  status: string;
-}
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-interface IReturnSearch {
-  conta: number;
-  documento: string;
-  nome: string;
-  oficios: string[];
-}
+export default function DocumentDescription() {
+  const { files, analyses, searchParam, updateParamAndRequery, isLoading } = useFileContext();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-interface IApiResponse {
-  results: IReturnSearch[];
-}
+  const params = new URLSearchParams(location.search);
+  const initialFile = params.get("file") || files[0]?.name || "";
+  const [selected, setSelected] = useState(initialFile);
+  const file = useMemo(() => files.find((f) => f.name === selected), [files, selected]);
 
-export const DocumentDescription: React.FC = () => {
-  const { result, setSearchResults } = useFileContext();
-  const [searchCompleted, setSearchCompleted] = useState(false);
-  const [searchDocument, setSearchDocument] = useState("");
-  const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null); // Documento selecionado
-  const [documentSearchResults, setDocumentSearchResults] = useState<Record<number, IReturnSearch[]>>(() => {
-    // Recuperar resultados do sessionStorage
-    const savedResults = sessionStorage.getItem("documentSearchResults");
-    return savedResults ? JSON.parse(savedResults) : {};
-  });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [localQuery, setLocalQuery] = useState(searchParam);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pagesRendered, setPagesRendered] = useState<number>(0);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [lastTriedAt, setLastTriedAt] = useState<number>(0); // força re-render manual
 
-  // Salvar documentSearchResults no sessionStorage sempre que for atualizado
+  // === util: checa se é um File válido (tem arrayBuffer)
+  const isValidFileObj = !!(file && typeof (file as any).arrayBuffer === "function");
+
   useEffect(() => {
-    sessionStorage.setItem("documentSearchResults", JSON.stringify(documentSearchResults));
-  }, [documentSearchResults]);
+    if (!files.length) return;
+    if (!selected) setSelected(files[0].name);
+  }, [files, selected]);
 
-  const searchDocuments = async (documentId: number) => {
+  useEffect(() => {
+    if (!file || !isValidFileObj) return;
+    const url = URL.createObjectURL(file);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, isValidFileObj]);
+
+  async function renderWithPdfJs() {
+    if (!file || !isValidFileObj || !containerRef.current) return;
+
     try {
-      const response = await api.get<IApiResponse>(`/search?document_number=${searchDocument}`);
-      if (response.status === 200) {
-        const newResults = response.data.results;
+      setRenderError(null);
+      setPagesRendered(0);
 
-        // Atualizar os resultados globais no searchResults
-        setSearchResults((prevResults) => {
-          const validPrevResults = Array.isArray(prevResults) ? prevResults : [];
-          return [
-            ...validPrevResults,
-            ...newResults.filter(
-              (newItem) =>
-                !validPrevResults.some((existingItem) => existingItem.documento === newItem.documento)
-            ),
-          ];
-        });
+      const arrayBuffer = await file.arrayBuffer(); // <== quebra se não for File verdadeiro
+      const pdf = await (pdfjsLib as any).getDocument({ data: arrayBuffer }).promise;
+      setNumPages(pdf.numPages);
 
-        // Associar os resultados ao documento específico
-        setDocumentSearchResults((prevResults) => ({
-          ...prevResults,
-          [documentId]: newResults,
-        }));
+      const host = containerRef.current!;
+      host.innerHTML = "";
 
-        setSearchCompleted(true);
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const viewport = page.getViewport({ scale: 1.2 });
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = "100%";
+        canvas.style.height = "auto";
+        canvas.className = "rounded-lg shadow mb-4";
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        host.appendChild(canvas);
+        setPagesRendered((prev) => prev + 1);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error("pdf.js render error:", err);
+      setRenderError(err?.message || "Falha ao renderizar PDF");
     }
+  }
+
+  // tenta renderizar quando muda arquivo / botão “tentar de novo”
+  useEffect(() => {
+    if (!file || !containerRef.current) return;
+    if (!isValidFileObj) return; // mostraremos mensagem específica abaixo
+    renderWithPdfJs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, isValidFileObj, lastTriedAt]);
+
+  const analysis = file ? analyses[file.name] : undefined;
+  const occurrences = useMemo(() => {
+    const pagesText = analysis?.pagesText || [];
+    if (!localQuery.trim()) return [];
+    return findTermOccurrences(pagesText, localQuery);
+  }, [analysis?.pagesText, localQuery]);
+
+  const applyAndGoOccurrences = async () => {
+    await updateParamAndRequery(localQuery);
+    navigate("/relationship");
   };
 
-  // Função para renderizar um documento individual
-  const renderDocumentItem = (doc: any, index: number) => {
-    const documentData: IDocument = {
-      id: index,
-      name: `Documento ${index + 1}`,
-      path: doc.document,
-      status:
-        doc.cpf_numbers.length === 0 && doc.cnpj_numbers.length === 0
-          ? "pendente"
-          : "analisado",
-    };
-
-    const finalSearchResults = documentSearchResults[documentData.id] || [];
-
+  // ======= UI states claros =======
+  if (!files.length) {
     return (
-      <li
-        key={`doc-${index}`}
-        className="flex items-center justify-between p-4 w-full border rounded-lg shadow-sm hover:bg-gray-100"
-      >
-        <div className="flex flex-col">
-          <h2 className="font-semibold">{documentData.name}</h2>
-          <span className="text-gray-600">{documentData.path}</span>
+      <div className="p-4 text-sm">
+        Nenhum arquivo carregado. <button className="underline" onClick={() => navigate("/")}>Enviar PDFs</button>
+      </div>
+    );
+  }
 
-          {/* Condicional para mostrar a etiqueta amarela */}
-          {documentData.status === "pendente" && (
-            <span className="bg-yellow-300 text-yellow-800 px-2 py-1 text-xs rounded-md mt-1">
-              Pendente de Análise
-            </span>
+  if (!file) {
+    return (
+      <div className="p-4 text-sm">
+        Arquivo não encontrado na seleção atual.
+        <div className="mt-2">
+          <label className="text-sm mr-2">Escolher:</label>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            <option value="" disabled>Selecione…</option>
+            {files.map((f) => (
+              <option key={f.name} value={f.name}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  // Se o objeto não é um File real (sessão recarregada, p.ex.)
+  if (!isValidFileObj) {
+    return (
+      <div className="p-4 flex flex-col gap-3">
+        <div className="text-sm text-red-600">
+          Este arquivo não é mais um <code>File</code> válido (provável reload da página). Reenvie os PDFs.
+        </div>
+        <div className="text-xs text-slate-600">
+          Dica: objetos <code>File</code> não sobrevivem no <code>sessionStorage</code>. Evite persistir <code>files</code> ou não recarregue a página entre o upload e a visualização.
+        </div>
+        <button className="underline w-max text-sm" onClick={() => navigate("/")}>Voltar ao upload</button>
+
+        {/* Diagnóstico visível */}
+        <div className="border rounded p-3 text-xs">
+          <div className="font-semibold mb-2">Diagnóstico do arquivo selecionado</div>
+          <div>name: {file?.name}</div>
+          <div>type: {(file as any)?.type?.toString?.() || "-"}</div>
+          <div>size: {(file as any)?.size ?? "-"}</div>
+          <div>tem arrayBuffer(): {String(typeof (file as any).arrayBuffer === "function")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ======= Render normal =======
+  return (
+    <div className="p-4 flex flex-col gap-4">
+      {/* Barra superior */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <label className="text-sm">Arquivo:</label>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            {files.map((f) => (
+              <option key={f.name} value={f.name}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            className="border rounded-md px-3 py-2 text-sm w-80"
+            placeholder="Novo parâmetro (será aplicado globalmente)"
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
+          />
+          <button
+            onClick={applyAndGoOccurrences}
+            className="text-sm px-3 py-2 rounded-md border hover:bg-gray-50"
+            disabled={!localQuery.trim() || isLoading}
+            title="Recalcula ocorrências em todos os arquivos e vai para 'Ocorrências encontradas'"
+          >
+            {isLoading ? "Atualizando..." : "Atualizar ocorrências globais"}
+          </button>
+        </div>
+      </div>
+
+      {/* Diagnóstico rápido */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-700">
+        <div className="border rounded p-2">
+          <div className="font-semibold mb-1">Arquivo</div>
+          <div>name: {file.name}</div>
+          <div>type: {(file as any).type || "-"}</div>
+          <div>size: {(file as any).size ?? "-"}</div>
+          <div>pages renderizadas: {pagesRendered}/{numPages}</div>
+        </div>
+        <div className="border rounded p-2">
+          <div className="font-semibold mb-1">Parâmetro local</div>
+          <div>{localQuery || "(vazio)"}</div>
+          <div>Ocorrências (neste arquivo): {findTermOccurrences(analyses[file.name]?.pagesText || [], localQuery).length}</div>
+        </div>
+        <div className="border rounded p-2">
+          <div className="font-semibold mb-1">Ações</div>
+          <button
+            onClick={() => setLastTriedAt(Date.now())}
+            className="text-xs px-2 py-1 rounded border hover:bg-gray-50"
+          >
+            Tentar renderizar de novo
+          </button>
+          {blobUrl && (
+            <a
+              href={blobUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-2 underline"
+            >
+              Abrir PDF em nova aba
+            </a>
           )}
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedDocument(documentData)}
-              className="hover:bg-azulReal-CMYK bg-azulAmplo-RGB hover:text-white text-white"
-            >
-              Visualizar
-            </Button>
-          </DialogTrigger>
-          <DialogContent 
-            aria-describedby="Conteúdo do modal, PDF renderizado, busca no banco de dados e entre outras funcionalidades"
-            className="sm:max-w-[800px] flex flex-col items-center justify-center"
-          >
-            <DialogHeader className="flex flex-col w-full p-2 gap-4">
-              <DialogTitle className="text-xl">{selectedDocument?.path}</DialogTitle>
-              <div className="flex w-full max-w-sm items-center space-x-2">
-                <Input
-                  onChange={(e) => setSearchDocument(e.target.value)}
-                  type="text"
-                  placeholder="Busque o documento por aqui"
-                />
-                <Button
-                  onClick={() => searchDocuments(documentData.id)}
-                  className="bg-azulReal-CMYK hover:bg-azulReal-RGB"
-                >
-                  Buscar
-                </Button>
-              </div>
-              {searchCompleted &&
-                (finalSearchResults.length > 0 ? (
-                  finalSearchResults.map((ret) => (
-                    <li className="list-none flex gap-2" key={ret.conta}>
-                      <span className="font-semibold">Resultados da {ret.oficios}</span>
-                      <span>Nome: {ret.nome}</span>
-                      <span>Conta: {ret.conta}</span>
-                      <span>Documento: {ret.documento}</span>
-                    </li>
-                  ))
-                ) : (
-                  <p className="font-semibold mt-4">
-                    Nenhum resultado encontrado para o documento pesquisado.
-                  </p>
-                ))}
-            </DialogHeader>
-            {selectedDocument && (
-              <div className="w-full h-[500px]">
-                <embed
-                  src={`https://analisador.amplea.coop.br/api/uploads/${encodeURIComponent(
-                    selectedDocument.path
-                  )}`}
-                  type="application/pdf"
-                  width="100%"
-                  height="100%"
-                />
-              </div>
-            )}
-            <DialogClose>
-              <div
-                role="button"
-                className="text-white p-2 rounded-lg text-sm font-semibold bg-azulReal-CMYK hover:bg-azulReal-RGB"
-              >
-                <span>Finalizar Análise</span>
-              </div>
-            </DialogClose>
-          </DialogContent>
-        </Dialog>
-      </li>
-    );
-  };
+      </div>
 
-  return (
-    <div className="flex flex-col gap-4 mt-2 p-4">
-      <h1 className="text-xl mt-2 mb-2 font-semibold"> Lista completa</h1>
+      {/* Lista de ocorrências deste arquivo */}
+      {localQuery.trim() && (
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold mb-2">
+            Ocorrências (neste arquivo) — {findTermOccurrences(analyses[file.name]?.pagesText || [], localQuery).length}
+          </div>
+          {occurrences.length ? (
+            <ul className="list-disc ml-5 text-sm">
+              {occurrences.slice(0, 100).map((m, i) => (
+                <li key={i}>
+                  Página {m.page}: <code className="bg-gray-100 px-1">{m.snippet}</code>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-sm text-gray-600">Nenhuma ocorrência neste arquivo.</div>
+          )}
+        </div>
+      )}
 
-      <ul className="space-y-2">
-        {result.document_descriptions && result.document_descriptions.length > 0 ? (
-          result.document_descriptions.map(renderDocumentItem)
-        ) : (
-          <p className="text-gray-500">Nenhum documento encontrado.</p>
-        )}
-      </ul>
+      {/* Viewer */}
+      {!renderError ? (
+        <div ref={containerRef} className="mt-2 max-h-[75vh] overflow-auto w-full border rounded p-2 bg-white" />
+      ) : (
+        <div className="border rounded-lg p-3">
+          <div className="text-sm text-red-600 mb-2">
+            Falha ao renderizar no canvas: {renderError}
+          </div>
+          {blobUrl ? (
+            <object data={blobUrl} type="application/pdf" className="w-full h-[75vh] rounded-lg">
+              <p className="text-sm">
+                Seu navegador não exibiu o PDF.{" "}
+                <a href={blobUrl} target="_blank" rel="noreferrer" className="underline">
+                  Abrir em outra aba
+                </a>.
+              </p>
+            </object>
+          ) : (
+            <div className="text-xs text-gray-600">Sem blob URL disponível.</div>
+          )}
+        </div>
+      )}
     </div>
   );
-};
+}
