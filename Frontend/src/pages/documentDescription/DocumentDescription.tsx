@@ -133,7 +133,7 @@ export function DocumentDescription() {
         <div className="text-sm text-red-600">
           Este arquivo não é mais um <code>File</code> válido (provável reload da página). Reenvie os PDFs.
         </div>
-        <div className="text-xs text-gray-600">
+        <div className="text-xs text-slate-600">
           Dica: objetos <code>File</code> não sobrevivem no <code>sessionStorage</code>. Evite persistir <code>files</code> ou não recarregue a página entre o upload e a visualização.
         </div>
         <button className="underline w-max text-sm" onClick={() => navigate("/")}>Voltar ao upload</button>

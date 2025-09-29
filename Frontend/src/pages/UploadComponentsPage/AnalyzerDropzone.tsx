@@ -67,18 +67,18 @@ export const AnalyzerDropzone: React.FC = () => {
           >
             <input {...getInputProps()} />
             {isDragActive ? (
-              <span className="text-sm font-semibold text-azulReal-CMYK">Arraste para cá</span>
+              <span className="text-sm font-semibold text-blue-500">Arraste para cá</span>
             ) : (
               <>
                 <div className="flex gap-2 group select-none w-max">
                   <CloudUpload color={isAnalyzed ? "#c4c4c4" : "#5f82af"} size={20} />
                   <span className={`text-sm select-none font-semibold ${
-                    isAnalyzed ? "text-cinza-04 hover:cursor-not-allowed" : "text-azulReal-CMYK"
+                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-azulReal-CMYK"
                   }`}>
                     Faça Upload dos arquivos
                   </span>
                   <span className={`text-sm ${
-                    isAnalyzed ? "text-cinza-04 hover:cursor-not-allowed" : "text-chumbo-02"
+                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-chumbo-02"
                   }`}>
                     Arraste ou clique aqui
                   </span>
@@ -96,7 +96,7 @@ export const AnalyzerDropzone: React.FC = () => {
         <div className="flex justify-between">
           <button
             onClick={handleAnalyze}
-            className="border disabled:bg-cinza-04 disabled:cursor-not-allowed w-max text-sm font-medium p-2 ease-in-out delay-150 bg-azulReal-CMYK text-white rounded-lg hover:bg-azulReal-RGB transition"
+            className="border disabled:bg-cinza-04 disabled:cursor-not-allowed w-max text-sm font-medium p-2 ease-in-out delay-150 bg-green-500 text-white rounded-lg hover:bg-green-400 transition"
             disabled={isLoading || !searchParam.trim() || isAnalyzed}
           >
             {isLoading
@@ -111,7 +111,7 @@ export const AnalyzerDropzone: React.FC = () => {
 
       {isLoading && (
         <div className="flex items-center mt-2">
-          <div className="w-full bg-gray-300 rounded-full h-2.5">
+          <div className="w-full bg-slate-300 rounded-full h-2.5">
             <div className="bg-blue-500 h-2.5 rounded-full animate-pulse" style={{ width: "100%" }}></div>
           </div>
           <span className="ml-2 text-sm animate-pulse text-azulReal-CMYK">Carregando...</span>

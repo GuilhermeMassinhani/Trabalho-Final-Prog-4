@@ -18,7 +18,7 @@ export function PendingAnalyze() {
 
       <div className="border rounded-lg overflow-hidden">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-zinc-50">
             <tr>
               <th className="text-left p-3 font-medium">Documento</th>
               <th className="text-left p-3 font-medium">Ocorrências</th>
@@ -35,7 +35,7 @@ export function PendingAnalyze() {
                 <tr key={f.name} className="border-t">
                   <td className="p-3">{f.name}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs ${occ > 0 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                    <span className={`px-2 py-1 rounded text-xs ${occ > 0 ? "bg-green-100 text-green-800" : "bg-zinc-400 text-zinc-600"}`}>
                       {occ}
                     </span>
                   </td>
@@ -57,7 +57,7 @@ export function PendingAnalyze() {
         </table>
       </div>
 
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-zinc-500">
         Dica: use “Análise manual” para testar um novo parâmetro e depois clique em “Atualizar ocorrências globais”.
       </div>
     </div>

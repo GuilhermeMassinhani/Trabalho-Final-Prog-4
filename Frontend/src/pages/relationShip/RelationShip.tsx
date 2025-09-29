@@ -35,7 +35,7 @@ export function RelationShip() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Ocorrências encontradas</h2>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-zinc-500">
             Parâmetro atual: <span className="font-mono">{searchParam || "(vazio)"}</span> • {total} ocorrência(s)
           </div>
         </div>
@@ -48,11 +48,11 @@ export function RelationShip() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-sm text-gray-600">Nenhuma ocorrência para exibir.</div>
+        <div className="text-sm text-zinc-400">Nenhuma ocorrência para exibir.</div>
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-zinc-50">
               <tr>
                 <th className="text-left p-3 font-medium">Arquivo</th>
                 <th className="text-left p-3 font-medium">Página</th>
@@ -65,7 +65,7 @@ export function RelationShip() {
                   <td className="p-3">{r.fileName}</td>
                   <td className="p-3 w-16">#{r.page}</td>
                   <td className="p-3">
-                    <code className="bg-gray-50 px-1 py-0.5 rounded">{r.snippet}</code>
+                    <code className="bg-zinc-50 px-1 py-0.5 rounded">{r.snippet}</code>
                   </td>
                 </tr>
               ))}
