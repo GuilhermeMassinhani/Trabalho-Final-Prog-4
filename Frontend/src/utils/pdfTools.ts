@@ -69,13 +69,10 @@ export async function ocrPdfPageToText(file: File, pageNumber: number): Promise<
   return data.text || "";
 }
 
-/** Normaliza string: remove acentos, comprime espaços, mantém só texto útil */
 function norm(s: string) {
   return (s || "")
     .normalize("NFD")
-    // remove sinais diacríticos (acentos)
     .replace(/\p{Diacritic}/gu, "")
-    // troca qualquer whitespace por 1 espaço
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -83,14 +80,13 @@ function norm(s: string) {
 /** Cria regex “solta”: permite espaços/pontuação entre os caracteres do termo */
 function makeLooseRegex(term: string) {
   const t = norm(term);
-  // escapa meta-caracteres
   const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // entre cada caractere permite \s ou não-palavra (pontuação, _)
   const pattern = esc.split("").join("[\\s\\W_]*");
   return new RegExp(pattern, "gi");
 }
 
-/** Busca tolerante (case/acentos/espaços/pontuação) em todas as páginas  */
+/** Busca tolerante (acentos/espaços/pontuação) em todas as páginas  */
 export function findTermOccurrences(pages: string[], term: string) {
   const re = makeLooseRegex(term);
   const results: Array<{ page: number; index: number; snippet: string }> = [];
