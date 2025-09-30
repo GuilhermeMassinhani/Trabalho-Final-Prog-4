@@ -8,10 +8,7 @@ import { extractTextWithPdfJs, ocrPdfPageToText, findTermOccurrences } from "../
  * ========================= */
 
 export interface IReturnSearch {
-  conta: number;        // opcional/legado (mantenho caso você use em alguma tela)
   documento: string;    // nome do arquivo
-  nome: string;         // opcional
-  oficios: string[];    // opcional
 }
 
 export type DocAnalysis = {
@@ -20,18 +17,6 @@ export type DocAnalysis = {
   found: boolean;
   matches: { page: number; index: number; snippet: string }[];
 };
-
-// Mantido apenas para compatibilidade com telas antigas
-export interface IApiResult {
-  document_descriptions: Array<{
-    cnpj_numbers: string[];
-    cpf_numbers: string[];
-    description: string;
-    document: string;
-  }>;
-  no_cpf_cnpj_docs: string[];
-  results: [];
-}
 
 export interface IReturnApi {
   // Arquivos
@@ -53,8 +38,6 @@ export interface IReturnApi {
   analyzeFiles: () => Promise<void>;                // primeira análise com parâmetro atual
   updateParamAndRequery: (newParam: string) => Promise<void>; // troca termo e reconta TUDO
 
-  // Legado/compat (se ainda houver telas consumindo)
-  result: IApiResult;
   searchResults: Record<string, IReturnSearch[]>;
   setSearchResults: (r: Record<string, IReturnSearch[]>) => void;
 
@@ -91,15 +74,6 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     JSON.parse(sessionStorage.getItem("analyses") || "{}")
   );
 
-  // Compatibilidade com telas legadas (não usados na nova lógica)
-  const defaultResult: IApiResult = {
-    document_descriptions: [],
-    no_cpf_cnpj_docs: [],
-    results: [],
-  };
-  const [result, setResult] = useState<IApiResult>(
-    JSON.parse(sessionStorage.getItem("result") || "null") || defaultResult
-  );
   const [searchResults, setSearchResults] = useState<Record<string, IReturnSearch[]>>(
     JSON.parse(sessionStorage.getItem("searchResults") || "{}")
   );
@@ -288,10 +262,6 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
   }, [files]);
 
   useEffect(() => {
-    sessionStorage.setItem("result", JSON.stringify(result));
-  }, [result]);
-
-  useEffect(() => {
     sessionStorage.setItem("searchResults", JSON.stringify(searchResults));
   }, [searchResults]);
 
@@ -312,7 +282,6 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
     setAnalyses({});
     setSearchResults({});
     setSearchParam("");
-    setResult(defaultResult);
     sessionStorage.clear();
     window.location.reload();
   };
@@ -335,12 +304,6 @@ export const FileProvider: React.FC<IFileProviderProps> = ({ children }) => {
 
         analyzeFiles,
         updateParamAndRequery,
-
-        // legado
-        result,
-        searchResults,
-        setSearchResults,
-
         clearSearch,
       }}
     >
