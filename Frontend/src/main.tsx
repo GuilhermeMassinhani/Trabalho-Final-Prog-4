@@ -21,7 +21,7 @@ const router = createBrowserRouter([
       </FileProvider>
     ),
     children: [
-      { index: true, element: <ComponentAnalyzerDropZone /> },
+      { path: "/", element: <ComponentAnalyzerDropZone /> },
       { path: "relationship", element: <RelationShip /> },
       { path: "pendingAnalyze", element: <PendingAnalyze /> },
       { path: "documentDescription", element: <DocumentDescription /> },

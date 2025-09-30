@@ -8,20 +8,7 @@ export function Sidebar () {
 
     return (
         <>
-        <aside className=" max-h-full border-r h- border-r-cinza-04 flex flex-col gap-6 px-5 py-12">
-          {/*
-            O InputRoot foi desativado porque o recurso de busca ainda não está 
-            implementado.
-        */}
-
-          {/* 
-          <InputRoot>
-            <InputPrefix>
-              <Search className="h-5 w-5 text-gray " />
-            </InputPrefix>
-            <InputControl placeholder="Buscar" />
-          </InputRoot> 
-          */}
+        <aside className=" max-h-full border-r h- border-r-zinc-200 flex flex-col gap-6 px-5 py-12">
           <Navigation/>
 
           <div className="mt-auto flex flex-col gap-6">

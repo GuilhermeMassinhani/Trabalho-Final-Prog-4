@@ -22,9 +22,9 @@ export function MenuBarAnalyzerItem({ tittle, linkTo, occurrences }: NavAnalyzer
         className={({ isActive }) =>
           `transition delay-150 ease-in-out p-2 text-sm ${
             isActive
-              ? "text-azulReal-CMYK font-bold" // Classe para o link ativo
+              ? "text-green-400 font-bold" // Classe para o link ativo
               : "text-chumbo-01"
-          } ${isLoading ? "cursor-not-allowed hover:text-cinza-04" : "hover:text-azulReal-CMYK"}`
+          } ${isLoading ? "cursor-not-allowed hover:text-zinc-400" : "hover:text-green-500"}`
         }
       >
         {tittle}

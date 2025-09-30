@@ -13,18 +13,18 @@ export function NavItem ({title, icon: Icon, showChevron, targetBlank, link}: Na
     return (
 
         <a
-        className="group flex items-center gap-3 rounded px-3 py-2 hover:bg-cinza-03" 
+        className="group flex items-center gap-3 rounded px-3 py-2 hover:bg-green-50" 
         href={link}
         rel={targetBlank ? "noopener noreferrer" : undefined}
         target={targetBlank ? "_blank" : "_self"}
         >
-        
-            <Icon className="h-5 w-5 text-gray group-hover:text-azulReal-CMYK"/>
-            <span className="font-medium text-gray group-hover:text-azulReal-CMYK ">
+
+            <Icon className="h-5 w-5 text-gray group-hover:text-green-500"/>
+            <span className="font-medium text-gray group-hover:text-green-500">
                 {title}
             </span>
             {showChevron && (
-                <ChevronDown className="ml-auto w-5 h-5 group-hover:text-azulReal-RGB"/>
+                <ChevronDown className="ml-auto w-5 h-5 group-hover:text-green-500"/>
             )}
         </a>
     )

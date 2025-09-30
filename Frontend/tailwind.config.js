@@ -16,11 +16,6 @@ export default {
   		colors: {
   			white: '#ffff',
   			orange: '#ff7849',
-  			verde: '#4bb46e',
-  			'verde-campo': '#009646',
-  			marrom: '#c3b9af',
-  			'marrom-terra': '#969182',
-  			amarelo: '#fac887',
   			'gray-dark': '#273444',
   			gray: 'rgba(128, 128, 128)',
   			'gray-light': '#d3dce6',

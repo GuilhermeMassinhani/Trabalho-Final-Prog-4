@@ -19,7 +19,7 @@ export const AlertDialogButton = () => {
         <AlertDialog>
             <AlertDialogTrigger asChild>
                 <Button
-                    className="border disabled:bg-cinza-04 w-max disabled:cursor-not-allowed text-sm font-medium p-2 ease-in-out delay-150 bg-azulReal-CMYK text-white rounded-xl hover:bg-azulReal-RGB transition"
+                    className="border disabled:bg-zinc-400 w-max disabled:cursor-not-allowed text-sm font-medium p-2 ease-in-out delay-150 bg-green-500 text-white rounded-xl hover:bg-green-400 transition"
                     disabled={isLoading}
                 >Limpar busca</Button>
             </AlertDialogTrigger>

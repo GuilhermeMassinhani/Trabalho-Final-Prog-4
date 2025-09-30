@@ -61,29 +61,29 @@ export const AnalyzerDropzone: React.FC = () => {
         <div className="flex flex-col h-max items-center">
           <div
             className={`py-4 px-2 w-2/4 h-24 group justify-center cursor-pointer rounded-2xl gap-2 flex border border-dotted ${
-              isAnalyzed ? "border-cinza-04 cursor-not-allowed" : "border-chumbo-02"
+              isAnalyzed ? "border-zinc-300 cursor-not-allowed" : "border-chumbo-02"
             } flex-col items-center`}
             {...getRootProps()}
           >
             <input {...getInputProps()} />
             {isDragActive ? (
-              <span className="text-sm font-semibold text-blue-500">Arraste para cá</span>
+              <span className="text-sm font-semibold text-green-500">Arraste para cá</span>
             ) : (
               <>
                 <div className="flex gap-2 group select-none w-max">
                   <CloudUpload color={isAnalyzed ? "#c4c4c4" : "#5f82af"} size={20} />
                   <span className={`text-sm select-none font-semibold ${
-                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-azulReal-CMYK"
+                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-green-500"
                   }`}>
                     Faça Upload dos arquivos
                   </span>
                   <span className={`text-sm ${
-                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-chumbo-02"
+                    isAnalyzed ? "text-slate-400 hover:cursor-not-allowed" : "text-zinc-400"
                   }`}>
                     Arraste ou clique aqui
                   </span>
                 </div>
-                <span className={`text-sm ${isAnalyzed ? "text-cinza-04 hover:cursor-not-allowed" : "text-chumbo-02"}`}>
+                <span className={`text-sm ${isAnalyzed ? "text-green-400 hover:cursor-not-allowed" : "text-chumbo-02"}`}>
                   PDF
                 </span>
               </>
@@ -112,9 +112,9 @@ export const AnalyzerDropzone: React.FC = () => {
       {isLoading && (
         <div className="flex items-center mt-2">
           <div className="w-full bg-slate-300 rounded-full h-2.5">
-            <div className="bg-blue-500 h-2.5 rounded-full animate-pulse" style={{ width: "100%" }}></div>
+            <div className="bg-green-500 h-2.5 rounded-full animate-pulse" style={{ width: "100%" }}></div>
           </div>
-          <span className="ml-2 text-sm animate-pulse text-azulReal-CMYK">Carregando...</span>
+          <span className="ml-2 text-sm animate-pulse text-green-500">Carregando...</span>
         </div>
       )}
     </div>
